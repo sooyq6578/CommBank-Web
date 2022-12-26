@@ -11,16 +11,60 @@ import { selectGoalsMap, updateGoal as updateGoalRedux } from '../../../store/go
 import { useAppDispatch, useAppSelector } from '../../../store/hooks'
 import DatePicker from '../../components/DatePicker'
 import { Theme } from '../../components/Theme'
+import EmojiPicker from '../../components/EmojiPicker'
+import { BaseEmoji, Picker } from 'emoji-mart'
 
 type Props = { goal: Goal }
+
+const GoalIconContainer = styled.div<GoalIconContainerProps>`
+  display: ${(props) => (props.shouldShow ? 'flex' : 'none')};
+`
+
+const EmojiPickerContainer = styled.div<EmojiPickerContainerProps>`
+  display: ${(props) => (props.isOpen ? 'flex' : 'none')};
+  position: absolute;
+  top: ${(props) => (props.hasIcon ? '10rem' : '2rem')};
+  left: 0;
+`
 export function GoalManager(props: Props) {
   const dispatch = useAppDispatch()
 
   const goal = useAppSelector(selectGoalsMap)[props.goal.id]
-
+  const [icon, setIcon] = useState<string | null>(null)
   const [name, setName] = useState<string | null>(null)
   const [targetDate, setTargetDate] = useState<Date | null>(null)
   const [targetAmount, setTargetAmount] = useState<number | null>(null)
+
+  const [emojiPickerIsOpen, setEmojiPickerIsOpen] = useState(false)
+
+  useEffect(() => {
+    setIcon(props.goal.icon)
+  }, [props.goal.id, props.goal.icon])
+
+  const hasIcon = () => icon != null
+
+  const addIconOnClick = (event: React.MouseEvent) => {
+    event.stopPropagation()
+    setEmojiPickerIsOpen(true)
+  }
+
+  const pickEmojiOnClick = (emoji: BaseEmoji, event: MouseEvent) => {
+    event.stopPropagation()
+
+    setIcon(emoji.native)
+    setEmojiPickerIsOpen(false)
+  
+    const updatedGoal: Goal = {
+      ...props.goal,
+      icon: emoji.native ?? props.goal.icon,
+      name: name ?? props.goal.name,
+      targetDate: targetDate ?? props.goal.targetDate,
+      targetAmount: targetAmount ?? props.goal.targetAmount,
+    }
+  
+    dispatch(updateGoalRedux(updatedGoal))
+    updateGoalApi(props.goal.id, updatedGoal)
+  }
 
   useEffect(() => {
     setName(props.goal.name)
@@ -76,6 +120,7 @@ export function GoalManager(props: Props) {
   }
 
   return (
+    
     <GoalManagerContainer>
       <NameInput value={name ?? ''} onChange={updateNameOnChange} />
 
@@ -106,7 +151,18 @@ export function GoalManager(props: Props) {
           <StringValue>{new Date(props.goal.created).toLocaleDateString()}</StringValue>
         </Value>
       </Group>
+
+      <EmojiPickerContainer
+        isOpen={emojiPickerIsOpen}
+        hasIcon={hasIcon()}
+        onClick={(event)=>event.stopPropagation()}>
+      </EmojiPickerContainer>
+      
+      <GoalIconContainer shouldShow={hasIcon()}>
+      </GoalIconContainer>
+
     </GoalManagerContainer>
+    
   )
 }
 
